@@ -1,0 +1,10 @@
+=VLOOKUP(A19,IMPORTRANGE("1Ng7mleZvPqEt7fwdfzhmwYKdVhoWHr8cIUvfe-9guPI","Sheet2!b:c"),2,0)
+
+Vlook up between 2 google sheets data...
+
+
+A19 						= LOOKUP VALUE
+1Ng7mleZvPqEt7fwdfzhmwYKdVhoWHr8cIUvfe-9guPI 	= G sheet id
+Sheet2						= Refference sheet name
+b:c						= Cell address array
+2						= Index no
