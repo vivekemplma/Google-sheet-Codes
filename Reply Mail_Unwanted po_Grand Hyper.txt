@@ -1,0 +1,247 @@
+function sendStatusEmailsWithCustomColumnOrder() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var documentName = SpreadsheetApp.getActiveSpreadsheet().getName(); // Get the Google Sheet name
+  var lastRow = sheet.getLastRow();
+  var lastColumn = sheet.getLastColumn(); // Get the last column of the sheet
+  
+  var cityStatus = {};
+  var detailedData = [];
+
+  // Extract and check data from columns E, Z, and C
+  for (var i = 3; i <= lastRow; i++) { // Start from row 3
+    var city = sheet.getRange(i, 5).getValue(); // Column E
+    var remark = sheet.getRange(i, 26).getValue(); // Column Z
+    var additionalInfo = sheet.getRange(i, 3).getValue(); // Column C
+    
+    // Initialize city status if not already tracked
+    if (!(city in cityStatus)) {
+      cityStatus[city] = {
+        status: true, // Assume "done" initially
+        additionalInfo: additionalInfo
+      };
+    }
+    
+    // Determine if any row has an empty remark
+    if (!remark) {
+      cityStatus[city].status = false; // Mark as "not done"
+      // Add entire row to detailed data if "not done"
+      detailedData.push(sheet.getRange(i, 1, 1, lastColumn).getValues()[0]); // Get all columns in the row
+    }
+  }
+
+  // Convert city status to array for the new sheet, keeping only "Pending" rows
+  var pendingData = [];
+  for (var city in cityStatus) {
+    if (!cityStatus[city].status) { // If status is "not done"
+      pendingData.push([city, cityStatus[city].additionalInfo, "Pending"]);
+    }
+  }
+
+  if (pendingData.length === 0) {
+    Logger.log("No pending locations found.");
+    return; // Exit the function if no pending locations are found
+  }
+
+  // Create a new Google Sheet to export as Excel
+  var newSpreadsheet = SpreadsheetApp.create("Pending Report");
+  var newSheet = newSpreadsheet.getActiveSheet();
+
+  // Change the name of the output Excel sheet
+  newSheet.setName("Summary");
+
+  // Set headers for the new sheet
+newSheet.getRange(1, 1, 1, 3).mergeAcross(); // Merge first row across three columns
+var headerRange = newSheet.getRange(1, 1);
+
+// Get the active sheet's name
+var sheetName = SpreadsheetApp.getActiveSpreadsheet().getName();
+
+// Concatenate 'PENDING REMARKS OF ' with the sheet name
+var headerText = 'PENDING REMARKS OF ' + sheetName;
+
+// Set the merged cell value with the concatenated string
+headerRange.setValue(headerText);
+  headerRange.setFontWeight('bold'); // Make the text bold
+  headerRange.setFontSize(13.5); // Increase the font size
+  headerRange.setFontFamily('Cambria'); // Set the font style
+  headerRange.setFontColor('WHITE'); // Set the font color
+  headerRange.setHorizontalAlignment('center'); // Center align the text horizontally
+  headerRange.setVerticalAlignment('middle'); // Center align the text vertically
+  headerRange.setBackground('GREY');
+  
+  // Set column widths for the 'Summary' sheet
+  newSheet.setColumnWidth(1, 207); // Column A width
+  newSheet.setColumnWidth(2, 207); // Column B width
+  newSheet.setColumnWidth(3, 194); // Column C width
+
+  // Set row height for header row
+  newSheet.setRowHeight(1, 30); // Header row height
+
+  // Set column headers for 'Summary' sheet
+  headerRange = newSheet.getRange(2, 1, 1, 3);
+  headerRange.setValues([['LOCATION', 'AM', 'STATUS']]); // Set header values
+
+  // Apply formatting to column headers in 'Summary' sheet
+  headerRange.setFontWeight('bold'); // Make the text bold
+  headerRange.setFontSize(11); // Increase the font size
+  headerRange.setFontFamily('Cambria'); // Set the font style
+  headerRange.setFontColor('WHITE'); // Set the font color
+  headerRange.setHorizontalAlignment('center'); // Center align the text horizontally in data rows
+  headerRange.setVerticalAlignment('middle'); // Center align the text vertically in data rows
+  headerRange.setBackground('GREY');
+
+  // Write pending data to the 'Summary' sheet
+  var dataRange = newSheet.getRange(3, 1, pendingData.length, 3);
+  dataRange.setValues(pendingData);
+
+  // Apply formatting to all rows in 'Summary' sheet
+  dataRange.setFontSize(9); // Set font size for data rows
+  dataRange.setFontFamily('Cambria'); // Set font style for data rows
+  dataRange.setFontColor('black'); // Set font color for data rows
+  dataRange.setHorizontalAlignment('center'); // Center align the text horizontally in data rows
+  dataRange.setVerticalAlignment('middle'); // Center align the text vertically in data rows
+
+
+  newSheet.setFrozenRows(2);
+
+  // Add borders to the entire range in 'Summary' sheet
+  newSheet.getRange(1, 1, pendingData.length + 2, 3).setBorder(true, true, true, true, true, true); // Full range borders
+
+
+  // Add a new sheet for detailed information
+  var detailedSheet = newSpreadsheet.insertSheet('Detailed');
+
+ 
+ // Adjust column widths based on specified widths
+setSpecificColumnWidths(detailedSheet);
+
+// Set the header row height in the 'Detailed' sheet
+detailedSheet.setRowHeight(1, 45);
+
+// Set the header row height in the 'Summary' sheet
+newSheet.setRowHeight(1, 40);
+
+ 
+ // Write full data for 'not done' locations to the 'Detailed' sheet
+if (detailedData.length > 0) {
+  // Set headers for the 'Detailed' sheet with the same headers as Google Sheet
+  detailedSheet.getRange(1, 1, 1, 26).mergeAcross(); // Merge first row across 26 columns
+  var detailedHeaderRange = detailedSheet.getRange(1, 1);
+
+  // Get the active sheet's name
+  var sheetName = SpreadsheetApp.getActiveSpreadsheet().getName();
+
+  // Concatenate 'PENDING REMARKS OF ' with the sheet name
+  var detailedHeaderText = 'PENDING REMARKS OF ' + sheetName;
+
+  // Set the merged cell value with the concatenated string
+  detailedHeaderRange.setValue(detailedHeaderText);
+
+  // Apply formatting to the header
+  detailedHeaderRange.setFontWeight('bold'); // Make the text bold
+  detailedHeaderRange.setFontSize(18); // Increase the font size
+  detailedHeaderRange.setFontFamily('Cambria'); // Set the font style
+  detailedHeaderRange.setFontColor('WHITE'); // Set the font color
+  detailedHeaderRange.setHorizontalAlignment('center'); // Center align the text horizontally
+  detailedHeaderRange.setVerticalAlignment('middle'); // Center align the text vertically
+  detailedHeaderRange.setBackground('GREY');
+    
+    // Apply formatting to column headers in 'Detailed' sheet
+    var detailedHeaders = detailedSheet.getRange(2, 1, 1, 26);
+    detailedHeaders.setValues([sheet.getRange(2, 1, 1, 26).getValues()[0]]); // Copy headers from the second row of the original sheet
+    detailedHeaders.setFontWeight('bold'); // Make the text bold
+    detailedHeaders.setFontSize(11); // Increase the font size
+    detailedHeaders.setFontFamily('Cambria'); // Set the font style
+    detailedHeaders.setFontColor('WHITE'); // Set the font color
+    detailedHeaders.setHorizontalAlignment('left'); // Center align the text horizontally
+    detailedHeaders.setVerticalAlignment('middle'); // Center align the text vertically
+    detailedHeaders.setBackground('GREY');
+
+    // Write detailed data to the 'Detailed' sheet
+    var detailedDataRange = detailedSheet.getRange(3, 1, detailedData.length, 26);
+    detailedDataRange.setValues(detailedData);
+
+    // Apply formatting to all rows in 'Detailed' sheet
+    detailedDataRange.setFontSize(9); // Set font size for data rows
+    detailedDataRange.setFontFamily('Cambria'); // Set font style for data rows
+    detailedDataRange.setFontColor('black'); // Set font color for data rows
+    detailedDataRange.setHorizontalAlignment('left'); // Left align the text horizontally in data rows
+    detailedDataRange.setVerticalAlignment('middle'); // Center align the text vertically in data rows
+
+    // Format specific columns in the 'Detailed' sheet
+    detailedSheet.getRange(3, 6, detailedData.length, 1).setNumberFormat('## ?/?'); // Column 'E' as fraction
+    detailedSheet.getRange(3, 2, detailedData.length, 1).setNumberFormat('DD-MMM-YYYY'); // Column 'B' as date
+    detailedSheet.getRange(3, 20, detailedData.length, 1).setNumberFormat('DD-MMM-YYYY'); // Column 'T' as date
+    detailedSheet.getRange(3, 21, detailedData.length, 1).setNumberFormat('DD-MMM-YYYY'); // Column 'U' as date
+   
+    // Add borders to the entire range in 'Detailed' sheet
+    detailedSheet.getRange(1, 1, detailedData.length + 2, 26).setBorder(true, true, true, true, true, true); // Full range borders
+  }
+ detailedSheet.setFrozenRows(2);
+  // Force a recalculation and ensure data is fully written
+  SpreadsheetApp.flush();
+
+  // Export the sheet as Excel
+  var url = "https://docs.google.com/spreadsheets/d/" + newSpreadsheet.getId() + "/export?format=xlsx";
+  var options = {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer " + ScriptApp.getOAuthToken()
+    }
+  };
+
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    var blob = response.getBlob().setName("Pending Report.xlsx");
+    
+    // Send the email with the Excel file as an attachment
+    MailApp.sendEmail({
+      to: "inwardkuwait@grandhyper.com",
+      subject: "PENDING REMARKS OF " + documentName, // Concatenate document name with "PENDING REMARKS OF"
+      body: "Please find the attached Pending Report.",
+      attachments: [blob]
+    });
+  } catch (e) {
+    Logger.log("Failed to fetch Excel file: " + e.toString());
+  }
+
+  // Optionally delete the temporary Google Sheet
+  DriveApp.getFileById(newSpreadsheet.getId()).setTrashed(true);
+}
+
+// Function to set specific column widths for the 'Detailed' sheet
+function setSpecificColumnWidths(sheet) {
+  // Define specific widths for columns (width in pixels)
+  var columnWidths = {
+    1: 40,  // Column A
+    2: 106, // Column B
+    3: 140, // Column C
+    4: 80,  // Column D
+    5: 150, // Column E
+    6: 135, // Column F
+    7: 92, // Column G
+    8: 300, // Column H
+    9: 103, // Column I
+    10: 40, // Column J
+    11: 300, // Column K
+    12: 90, // Column L
+    13: 120, // Column M
+    14: 90,  // Column N
+    15: 97, // Column O
+    16: 120, // Column P
+    17: 105, // Column Q
+    18: 100, // Column R
+    19: 90,  // Column S
+    20: 120, // Column T
+    21: 111, // Column U
+    22: 125, // Column V
+    23: 130, // Column W
+    24: 131, // Column X
+    25: 135, // Column Y
+    26: 300  // Column Z
+  };
+
+  for (var col in columnWidths) {
+    sheet.setColumnWidth(parseInt(col), columnWidths[col]);
+  }
+}
